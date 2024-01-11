@@ -519,3 +519,41 @@ plt.ylabel("GRU Value")
 plt.annotate("r-squared = {:.3f}".format(r2_score(y_test, y_pred)), (20,1), size=15)
 plt.savefig(r"C:\Users\kapil\Desktop\worldquant\Courses\10. Capstone\JB KA Capstone\M7 submission\Capstone_Grp4524\plot_GRU.png", format="png")
 plt.show()
+
+# Define ranges for moneyness - OTM, ATM & ITM
+#compare the error metrics of 4 models in each of the range
+ranges = [(0.5, 0.9), (0.9, 1.1), (1.1, 1.5)]
+
+# Iterate through the ranges
+def calculate_errors(filter_df, model):
+    mse = round(metrics.mean_squared_error(filter['Close'], filter[f'{model}_price']), 3)
+    rmse = round(np.sqrt(mse), 3)
+    mae = round(metrics.mean_absolute_error(filter['Close'], filter[f'{model}_price']), 3)
+    mape = round(metrics.mean_absolute_percentage_error(filter['Close'], filter[f'{model}_price']), 3)
+    return {'MSE': mse, 'RMSE': rmse, 'MAE': mae, 'MAPE': mape}
+
+# Initialize dictionaries to store error metrics for each range and model
+error_metrics = {r: {model: [] for model in ['BS', 'ANN', 'LSTM', 'GRU']} for r in ranges}
+
+# Iterate through the ranges
+for r in ranges:
+    # Filter the DataFrame based on moneyness range
+    filter = comparemodels[(comparemodels['Moneyness'] >= r[0]) & (comparemodels['Moneyness'] < r[1])]
+
+    # Calculate errors for each model and store in the respective dictionary
+    for model in ['BS', 'ANN', 'LSTM', 'GRU']:
+        error_metrics[r][model] = calculate_errors(filter, model)
+
+# Create DataFrames for each range and model
+dfs = {r: {model: pd.DataFrame([error_metrics[r][model]]) for model in error_metrics[r]} for r in ranges}
+
+# Combine OTM error metrics for each model into a single DataFrame
+combined_dfs = {r: pd.concat([dfs[r][model] for model in ['BS', 'ANN', 'LSTM', 'GRU']],
+                             keys=['BS', 'ANN', 'LSTM', 'GRU']).reset_index(level=0).rename(
+    columns={'level_0': 'Model'}) for r in ranges}
+
+# Display the combined DataFrames for each range
+for r in ranges:
+    print(f"Range {r} Error Metrics:")
+    print(combined_dfs[r])
+    print("\n")
